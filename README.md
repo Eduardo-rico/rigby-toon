@@ -20,13 +20,13 @@ You can install Rigby using `pip` or `uv`.
 ### Using `uv` (Recommended)
 
 ```bash
-uv pip install rigby
+uv pip install rigby-toon
 ```
 
 ### Using `pip`
 
 ```bash
-pip install rigby
+pip install rigby-toon
 ```
 
 ## Usage
