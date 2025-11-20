@@ -1,32 +1,7 @@
-#!/usr/bin/env python3
-"""
-🦴 Rigby - The Code Raccoon 🦝
-==============================
-
-A python AST parser that extracts code skeletons into "TOON" format.
-It uses Python's native `ast` module to parse code structure without executing it.
-
-Usage:
-  chmod +x rigby.py
-  ./rigby.py parse <file_or_directory>
-
-Logic:
-  1. Walks through the directory tree (ignoring noise like .git, venv, node_modules).
-  2. Parses each .py file using `ast.NodeVisitor`.
-  3. Extracts:
-     - Classes (CLS) with inheritance.
-     - Functions (FUNC) and Methods (MTHD), distinguishing Async (ASYNC_).
-     - Global variables (VAR) if explicitly typed.
-  4. Flattens docstrings and resolves complex type hints using `ast.unparse`.
-  5. Prints the "TOON" format to stdout and personality logs to stderr.
-
-"""
-
 import ast
-import argparse
-import sys
 import os
-from typing import List, Optional, Set
+import sys
+from typing import Optional
 
 # --- Rigby Personality Logging ---
 # Uses stderr so stdout stays clean for piping (e.g., > context.toon)
@@ -35,7 +10,9 @@ def log_start(path: str):
     sys.stderr.write(f"Ugh, fine. Scanning {path}... Don't make me work too hard.\n")
 
 def log_success(count: int):
-    sys.stderr.write(f"Ooooooh! Done! Found {count} items. Here is your TOON context. In your face!\n")
+    sys.stderr.write(
+        f"Ooooooh! Done! Found {count} items. Here is your TOON context. In your face!\n"
+    )
 
 def log_error(error: str):
     sys.stderr.write(f"Dude, stop! This file is trash. I can't parse it. {error}\n")
@@ -96,7 +73,8 @@ class ToonVisitor(ast.NodeVisitor):
 
         # Handle positional-only args (Python 3.8+)
         # defaults list corresponds to [posonlyargs...] + [args...]
-        # The logic for mapping defaults is complex because defaults can cover both posonly and regular args.
+        # The logic for mapping defaults is complex because defaults can cover both 
+        # posonly and regular args.
         # However, ast.arguments stores defaults for both in 'defaults'.
         # It's easier to iterate backwards or calculate indices carefully.
 
@@ -153,10 +131,8 @@ class ToonVisitor(ast.NodeVisitor):
         # or to control the order/indentation precisely if needed.
         # But generic self.generic_visit(node) would also work if we filtered carefully.
         # Explicit loop is safer for 'TOON' output control.
-        has_content = False
         for child in node.body:
              if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                 has_content = True
                  self.visit(child)
              elif isinstance(child, ast.AnnAssign):
                  # Could handle class attributes here if needed
@@ -176,7 +152,7 @@ class ToonVisitor(ast.NodeVisitor):
         if node.returns:
             try:
                 ret_type = f" -> {ast.unparse(node.returns)}"
-            except:
+            except Exception:
                 ret_type = " -> Any"
 
         doc_str = self._format_docstring(node)
@@ -200,12 +176,12 @@ class ToonVisitor(ast.NodeVisitor):
                  type_str = ast.unparse(node.annotation)
                  name = node.target.id
                  self.output.append(f"VAR {name}: {type_str}")
-             except:
+             except Exception:
                  pass # Skip if complex to parse
 
 # --- Main Execution Logic ---
 
-def parse_file(filepath: str) -> str:
+def parse_file(filepath: str) -> tuple[str, int]:
     """Parses a single file and returns its TOON string representation."""
     with open(filepath, "r", encoding="utf-8") as f:
         source = f.read()
@@ -216,7 +192,8 @@ def parse_file(filepath: str) -> str:
     return "\n".join(visitor.output), visitor.items_found
 
 IGNORED_DIRS = {
-    "node_modules", ".git", "__pycache__", "venv", ".idea", ".vscode", "build", "dist", "env"
+    "node_modules", ".git", "__pycache__", "venv", ".idea", ".vscode", "build", "dist", "env",
+    ".venv", "site-packages", ".mypy_cache", ".ruff_cache"
 }
 
 def process_path(path: str):
@@ -255,18 +232,3 @@ def process_path(path: str):
         log_success(total_items)
     else:
         log_success(0)
-
-def main():
-    parser = argparse.ArgumentParser(description="Rigby: The code raccoon.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    parse_parser = subparsers.add_parser("parse", help="Parse python files to TOON format")
-    parse_parser.add_argument("path", help="Path to file or directory")
-
-    args = parser.parse_args()
-
-    if args.command == "parse":
-        process_path(args.path)
-
-if __name__ == "__main__":
-    main()
